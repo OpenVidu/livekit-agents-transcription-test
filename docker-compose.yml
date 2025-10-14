@@ -19,14 +19,10 @@ services:
     image: livekit/transcription-agent-test:latest
     container_name: agent
     environment:
+      - AGENT_WORKER_TYPE=room # room | publisher
       - LIVEKIT_URL=ws://livekit:7880
       - LIVEKIT_API_KEY=devkey
       - LIVEKIT_API_SECRET=secret
-      - STT_PROVIDER=aws
-      - AWS_ACCESS_KEY_ID=<your_aws_access_key_id>
-      - AWS_SECRET_ACCESS_KEY=<your_aws_secret_access_key>
-      - AWS_DEFAULT_REGION=<your_aws_region>
-      - AZURE_SPEECH_KEY=
-      - AZURE_SPEECH_REGION=
-      - AZURE_SPEECH_HOST=
-      - GOOGLE_APPLICATION_CREDENTIALS=
+      - AWS_ACCESS_KEY_ID=
+      - AWS_SECRET_ACCESS_KEY=
+      - AWS_DEFAULT_REGION=

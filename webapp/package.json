@@ -1,0 +1,11 @@
+{
+  "name": "livekit-transcription-webapp",
+  "version": "1.0.0",
+  "description": "Simple web app to test LiveKit transcription agent",
+  "scripts": {
+    "start": "http-server -p 3000"
+  },
+  "dependencies": {
+    "http-server": "^14.1.1"
+  }
+}
