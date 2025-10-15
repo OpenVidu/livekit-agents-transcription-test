@@ -12,7 +12,7 @@
     <style>
       body {
         font-family: Arial, sans-serif;
-        max-width: 800px;
+        max-width: 1100px;
         margin: 50px auto;
         padding: 20px;
       }
@@ -47,10 +47,31 @@
       #endBtn:hover {
         background-color: #da190b;
       }
+      .participant-container {
+        margin: 20px 0;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 10px;
+        background-color: #f9f9f9;
+      }
+      .participant-header {
+        font-weight: bold;
+        margin-bottom: 10px;
+        padding: 5px;
+        background-color: #e0e0e0;
+        border-radius: 3px;
+      }
+      .participant-name {
+        color: #2196f3;
+      }
+      .room-name {
+        color: #4caf50;
+      }
       textarea {
         width: 100%;
-        height: 300px;
+        height: 200px;
         font-family: monospace;
+        resize: vertical;
       }
     </style>
   </head>
@@ -70,27 +91,64 @@
     <button id="connectBtn">Connect New Participant</button>
     <button id="endBtn">End Test</button>
 
-    <div>
-      <textarea id="transcription" readonly></textarea>
-    </div>
+    <div id="participantsContainer"></div>
 
     <script>
-      const LIVEKIT_URL = "ws://localhost:7880";
-      const LIVEKIT_API_KEY = "devkey";
-      const LIVEKIT_API_SECRET = "secret";
+      const LIVEKIT_URL = "wss://your-livekit-url";
+      const LIVEKIT_API_KEY = "your-livekit-api-key";
+      const LIVEKIT_API_SECRET = "your-livekit-api-secret";
 
       let rooms = [];
-      let participantCount = 0;
 
       const connectBtn = document.getElementById("connectBtn");
       const endBtn = document.getElementById("endBtn");
       const roomNameInput = document.getElementById("roomName");
-      const transcriptionArea = document.getElementById("transcription");
+      const participantsContainer = document.getElementById(
+        "participantsContainer"
+      );
 
-      function log(message) {
+      function createParticipantTextArea(participantName, roomName) {
+        // Create container for this participant
+        const container = document.createElement("div");
+        container.className = "participant-container";
+        container.id = `participant-${participantName}`;
+
+        // Create header with participant and room info
+        const header = document.createElement("div");
+        header.className = "participant-header";
+        header.innerHTML = `<span class="participant-name">${participantName}</span> @ <span class="room-name">${roomName}</span>`;
+
+        // Create textarea for transcriptions
+        const textarea = document.createElement("textarea");
+        textarea.id = `transcript-${participantName}`;
+        textarea.readOnly = true;
+
+        // Append elements
+        container.appendChild(header);
+        container.appendChild(textarea);
+        participantsContainer.appendChild(container);
+
+        return textarea;
+      }
+
+      function log(participantName, message) {
         const timestamp = new Date().toLocaleTimeString();
-        transcriptionArea.value += `[${timestamp}] ${message}\n`;
-        transcriptionArea.scrollTop = transcriptionArea.scrollHeight;
+        const textarea = document.getElementById(
+          `transcript-${participantName}`
+        );
+        if (textarea) {
+          textarea.value += `[${timestamp}] ${message}\n`;
+          textarea.scrollTop = textarea.scrollHeight;
+        }
+      }
+
+      function removeParticipantTextArea(participantName) {
+        const container = document.getElementById(
+          `participant-${participantName}`
+        );
+        if (container) {
+          container.remove();
+        }
       }
 
       async function generateToken(roomName, participantName) {
@@ -120,17 +178,21 @@
           return;
         }
 
-        participantCount++;
-        const participantName = `participant-${participantCount}`;
+        const participantName = `participant-${Math.floor(
+          Math.random() * 10000000
+        )}`;
 
         try {
           connectBtn.disabled = true;
-          log(`Connecting ${participantName} to room: ${roomName}`);
 
           const token = await generateToken(roomName, participantName);
 
           const room = new LivekitClient.Room();
-          rooms.push(room);
+          rooms.push({ room, participantName, roomName });
+
+          // Create text area for this participant
+          createParticipantTextArea(participantName, roomName);
+          log(participantName, `Connecting to room: ${roomName}`);
 
           // Handle transcription
           room.registerTextStreamHandler(
@@ -140,13 +202,16 @@
               const isFinal =
                 reader.info.attributes["lk.transcription_final"] === "true";
               const trackId = reader.info.attributes["lk.transcribed_track_id"];
+              const segmentId = reader.info.attributes["lk.segment_id"];
               if (isFinal) {
                 log(
-                  `New final transcription from ${participantInfo.identity} and track ${trackId}: ${message}`
+                  participantName,
+                  `Final transcription from ${participantInfo.identity} [track ${trackId} | segment ${segmentId}]: ${message}`
                 );
               } else {
                 log(
-                  `New interim transcription from ${participantInfo.identity} and track ${trackId}: ${message}`
+                  participantName,
+                  `Interim transcription from ${participantInfo.identity} [track ${trackId} | segment ${segmentId}]: ${message}`
                 );
               }
             }
@@ -154,55 +219,53 @@
 
           // Handle room events
           room.on(LivekitClient.RoomEvent.Connected, () => {
-            log(`${participantName} connected to room`);
+            log(participantName, "Connected to room");
           });
 
           room.on(LivekitClient.RoomEvent.Disconnected, () => {
-            log(`${participantName} disconnected from room`);
+            log(participantName, "Disconnected from room");
             connectBtn.disabled = false;
           });
 
           room.on(
             LivekitClient.RoomEvent.ParticipantConnected,
             (participant) => {
-              log(`Participant joined: ${participant.identity}`);
+              log(
+                participantName,
+                `Participant joined: ${participant.identity}`
+              );
             }
           );
 
           // Connect to room
-          await room.connect(LIVEKIT_URL, token);
+          await room.connect(LIVEKIT_URL, token, {
+            autoSubscribe: false,
+          });
 
           // Publish audio track
           await room.localParticipant.setMicrophoneEnabled(true);
 
-          log(`${participantName} published audio track`);
+          log(participantName, "Published audio track");
           connectBtn.disabled = false;
         } catch (error) {
-          log(`Error: ${error.message}`);
+          log(participantName, `Error: ${error.message}`);
           connectBtn.disabled = false;
         }
       }
 
       async function endTest() {
-        log("Ending test - disconnecting all participants...");
-
-        for (const room of rooms) {
+        for (const { room, participantName } of rooms) {
           if (room && room.state === LivekitClient.ConnectionState.Connected) {
             await room.disconnect();
           }
+          removeParticipantTextArea(participantName);
         }
 
         rooms = [];
-        participantCount = 0;
-        log("All participants disconnected. Test ended.");
       }
 
       connectBtn.addEventListener("click", connectParticipant);
       endBtn.addEventListener("click", endTest);
-
-      log(
-        'Ready to connect. Enter a room name and click "Connect New Participant".'
-      );
     </script>
   </body>
 </html>

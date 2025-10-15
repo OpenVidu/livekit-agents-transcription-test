@@ -1,28 +1,15 @@
 services:
-  redis:
-    image: docker.io/redis:latest
-    container_name: redis
-    ports:
-      - 6379:6379
-
-  livekit:
-    image: livekit/livekit-server:latest
-    container_name: livekit
-    ports:
-      - 7880:7880
-      - 7881:7881
-    environment:
-      - "LIVEKIT_KEYS=devkey: secret"
-      - LIVEKIT_REDIS_ADDRESS=redis:6379
 
   agent:
     image: livekit/transcription-agent-test:latest
     container_name: agent
     environment:
+      - AGENT_NAME= # Leave empty for automatic dispatch
       - AGENT_WORKER_TYPE=room # room | publisher
-      - LIVEKIT_URL=ws://livekit:7880
-      - LIVEKIT_API_KEY=devkey
-      - LIVEKIT_API_SECRET=secret
-      - AWS_ACCESS_KEY_ID=
-      - AWS_SECRET_ACCESS_KEY=
-      - AWS_DEFAULT_REGION=
+      - LOG_LEVEL=debug # debug | info | warning | error | critical
+      - LIVEKIT_URL=
+      - LIVEKIT_API_KEY=
+      - LIVEKIT_API_SECRET=
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}

@@ -1,6 +1,7 @@
 """Simple LiveKit transcription agent using AWS Transcribe."""
 
 import os
+import sys
 from livekit.agents import (
     Agent,
     AgentSession,
@@ -10,6 +11,8 @@ from livekit.agents import (
     WorkerOptions,
     WorkerType,
     cli,
+    RoomOutputOptions,
+    RoomInputOptions,
 )
 from livekit.plugins import aws, silero
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
@@ -35,19 +38,47 @@ async def entrypoint(ctx: JobContext):
     )
 
     # Start the session
-    await session.start(agent=agent, room=ctx.room)
+    await session.start(
+        agent=agent,
+        room=ctx.room,
+        room_output_options=RoomOutputOptions(
+            # The agent will only generate text transcriptions as output
+            transcription_enabled=True,
+            audio_enabled=False,
+        ),
+        room_input_options=RoomInputOptions(
+            # The agent will only receive audio tracks as input
+            text_enabled=False,
+            video_enabled=False,
+            audio_enabled=True,
+            pre_connect_audio=True,
+            pre_connect_audio_timeout=3.0,
+        ),
+    )
 
     # Connect to room and subscribe to audio only
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
 
 
-# Configure worker type from environment variable
+# Apply log level from env var
+log_level = os.getenv("LOG_LEVEL", "debug").upper()
+sys.argv.append(f"--log-level={log_level}")
+print(f"Applied log level {log_level}")
+
+worker_options = WorkerOptions(entrypoint_fnc=entrypoint, prewarm_fnc=prewarm)
+
+# Configure worker type from env var
 worker_type = os.getenv("AGENT_WORKER_TYPE", "room")
 worker_type = WorkerType[worker_type.upper()]
+worker_options.worker_type = worker_type
+
+# Optionally configure agent name from env var
+agent_name = os.getenv("AGENT_NAME")
+if agent_name:
+    print(f"Starting agent prepared for manual dispatch with name: {agent_name}")
+    worker_options.agent_name = agent_name
+else:
+    print("Starting agent prepared for automatic dispatch")
 
 if __name__ == "__main__":
-    cli.run_app(
-        WorkerOptions(
-            entrypoint_fnc=entrypoint, prewarm_fnc=prewarm, worker_type=worker_type
-        )
-    )
+    cli.run_app(worker_options)
