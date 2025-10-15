@@ -237,6 +237,18 @@
             }
           );
 
+          // Handle speaking state changes for local participant
+          room.localParticipant.on(
+            LivekitClient.ParticipantEvent.IsSpeakingChanged,
+            (speaking) => {
+              if (speaking) {
+                log(participantName, "Local participant started speaking");
+              } else {
+                log(participantName, "Local participant stopped speaking");
+              }
+            }
+          );
+
           // Connect to room
           await room.connect(LIVEKIT_URL, token, {
             autoSubscribe: false,
