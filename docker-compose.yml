@@ -7,9 +7,9 @@ services:
       - AGENT_NAME= # Leave empty for automatic dispatch
       - AGENT_WORKER_TYPE=room # room | publisher
       - LOG_LEVEL=debug # debug | info | warning | error | critical
-      - LIVEKIT_URL=
-      - LIVEKIT_API_KEY=
-      - LIVEKIT_API_SECRET=
+      - LIVEKIT_URL=${LIVEKIT_URL}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
