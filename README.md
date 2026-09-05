@@ -1,5 +1,8 @@
 # livekit-agents-transcription-test
 
+> [!WARNING]
+> **This repository is no longer maintained.**
+
 Minimal setup to test audio transcription using livekit-agents STT node (with Amazon Transcribe)
 
 1. Build the agent container
